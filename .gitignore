@@ -1,0 +1,10 @@
+# build / runtime artifacts
+__pycache__/
+*.py[cod]
+*.plasmoid
+
+# KDE folder metadata (local)
+.directory
+
+# OS noise
+.DS_Store

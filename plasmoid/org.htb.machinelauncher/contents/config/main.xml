@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+    <!-- SPDX-FileCopyrightText: 2026 vedant-sec -->
+    <!-- SPDX-License-Identifier: MIT -->
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+    <kcfgfile name=""/>
+
+    <group name="General">
+        <!-- HTB App Token (app.hackthebox.com/profile/settings -> App Tokens) -->
+        <entry name="appToken" type="String">
+            <default></default>
+        </entry>
+
+        <!-- OpenVPN -->
+        <entry name="vpnConfig" type="String">
+            <default></default>
+        </entry>
+        <entry name="vpnMode" type="String">
+            <default>pkexec</default>
+        </entry>
+
+        <!-- Tooling -->
+        <entry name="burpCommand" type="String">
+            <default>burpsuite</default>
+        </entry>
+        <entry name="firefoxCommand" type="String">
+            <default>firefox</default>
+        </entry>
+        <entry name="launchBurp" type="Bool">
+            <default>true</default>
+        </entry>
+        <entry name="launchFirefox" type="Bool">
+            <default>true</default>
+        </entry>
+        <entry name="openMachineUrl" type="Bool">
+            <default>true</default>
+        </entry>
+        <entry name="terminateExisting" type="Bool">
+            <default>true</default>
+        </entry>
+
+        <!-- UI state -->
+        <entry name="lastMachine" type="String">
+            <default></default>
+        </entry>
+    </group>
+</kcfg>

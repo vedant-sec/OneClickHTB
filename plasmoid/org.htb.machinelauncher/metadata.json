@@ -1,0 +1,19 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "arceus"
+            }
+        ],
+        "Category": "System Information",
+        "Description": "Neon-glass control panel that authenticates with the Hack The Box API, spawns a machine, dials the VPN and launches BurpSuite + Firefox.",
+        "Icon": "network-vpn",
+        "Id": "org.htb.machinelauncher",
+        "License": "MIT",
+        "Name": "HTB Machine Launcher",
+        "Version": "1.0.8"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-MainScript": "ui/main.qml"
+}
