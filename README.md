@@ -1,5 +1,9 @@
 # OneClickHTB — KDE Plasma 6 widget
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-9fef00)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/vedant-sec/OneClickHTB)](https://github.com/vedant-sec/OneClickHTB/releases)
+[![Requires Plasma 6](https://img.shields.io/badge/KDE-Plasma%206-1d99f3)](https://kde.org/plasma-desktop/)
+
 A liquid-glass, neon-on-dark desktop widget for **KDE Plasma 6** that takes a
 machine name and walks a ladder:
 
@@ -60,7 +64,8 @@ Three ways, all equivalent:
 # 1. from a git clone (installs/upgrades, plus the app icon)
 ./install.sh
 
-# 2. from a release artifact (no clone needed)
+# 2. from the release artifact (no clone needed)
+#    https://github.com/vedant-sec/OneClickHTB/releases
 kpackagetool6 --type Plasma/Applet --install oneclickhtb-1.0.0.plasmoid
 
 # 3. Arch / CachyOS / EndeavourOS (once the AUR package is published)
