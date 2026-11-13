@@ -78,7 +78,7 @@ Or drop in the prebuilt plasmoid from the
 [releases page](https://github.com/vedant-sec/OneClickHTB/releases):
 
 ```bash
-kpackagetool6 --type Plasma/Applet --install oneclickhtb-1.0.1.plasmoid
+kpackagetool6 --type Plasma/Applet --install oneclickhtb-1.0.2.plasmoid
 ```
 
 `./install.sh --uninstall` removes the widget and its icon.

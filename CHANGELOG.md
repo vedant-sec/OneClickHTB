@@ -3,6 +3,15 @@
 All notable changes to **OneClickHTB**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow SemVer.
 
+## [1.0.2] — 2026-11-13
+
+### Changed
+
+- **More transparent glass.** The panel body went from 93–97 % opacity to
+  72–80 %, with a slightly brighter rim, so the wallpaper shows through the
+  frosted layer. Text contrast is kept by the per-rung fills and the specular
+  sheen; screenshots, demo GIF and social preview regenerated.
+
 ## [1.0.1] — 2026-11-13
 
 ### Fixed
@@ -67,5 +76,6 @@ First public release.
 - `scripts/pack.py` builds `dist/oneclickhtb-<version>.plasmoid`.
 - `packaging/PKGBUILD` for AUR.
 
+[1.0.2]: https://github.com/vedant-sec/OneClickHTB/releases/tag/v1.0.2
 [1.0.1]: https://github.com/vedant-sec/OneClickHTB/releases/tag/v1.0.1
 [1.0.0]: https://github.com/vedant-sec/OneClickHTB/releases/tag/v1.0.0

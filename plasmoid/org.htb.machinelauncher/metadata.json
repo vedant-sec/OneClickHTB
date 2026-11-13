@@ -14,7 +14,7 @@
         "Id": "org.htb.machinelauncher",
         "License": "MIT",
         "Name": "OneClickHTB",
-        "Version": "1.0.1",
+        "Version": "1.0.2",
         "Website": "https://github.com/vedant-sec/OneClickHTB"
     },
     "X-Plasma-API-Minimum-Version": "6.0",

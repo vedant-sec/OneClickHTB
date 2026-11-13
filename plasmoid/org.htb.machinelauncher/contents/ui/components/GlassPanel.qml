@@ -31,7 +31,7 @@ Item {
         anchors.fill: parent
         radius: 26
         border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.13)
+        border.color: Qt.rgba(1, 1, 1, 0.17)
         clip: true
 
         gradient: Gradient {
@@ -49,9 +49,9 @@ Item {
 
             gradient: Gradient {
                 orientation: Gradient.Vertical
-                GradientStop { position: 0.0; color: Qt.rgba(0.055, 0.086, 0.094, 0.93) }
-                GradientStop { position: 0.5; color: Qt.rgba(0.031, 0.055, 0.063, 0.95) }
-                GradientStop { position: 1.0; color: Qt.rgba(0.016, 0.031, 0.039, 0.97) }
+                GradientStop { position: 0.0; color: Qt.rgba(0.055, 0.086, 0.094, 0.72) }
+                GradientStop { position: 0.5; color: Qt.rgba(0.031, 0.055, 0.063, 0.76) }
+                GradientStop { position: 1.0; color: Qt.rgba(0.016, 0.031, 0.039, 0.80) }
             }
         }
 
