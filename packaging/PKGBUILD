@@ -17,6 +17,8 @@ optdepends=(
     'firefox: open the machine URL'
 )
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+# NOTE: run `updpkgsums` once this repository is public, then regenerate
+# .SRCINFO with `makepkg --printsrcinfo > .SRCINFO` (see packaging/README.md).
 sha256sums=('SKIP')
 
 package() {

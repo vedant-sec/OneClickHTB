@@ -63,7 +63,7 @@ Three ways, all equivalent:
 # 2. from a release artifact (no clone needed)
 kpackagetool6 --type Plasma/Applet --install oneclickhtb-1.0.0.plasmoid
 
-# 3. Arch / CachyOS / EndeavourOS (after the AUR package is published)
+# 3. Arch / CachyOS / EndeavourOS (once the AUR package is published)
 yay -S oneclickhtb
 ```
 

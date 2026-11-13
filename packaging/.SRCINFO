@@ -1,0 +1,19 @@
+pkgbase = oneclickhtb
+	pkgdesc = Neon-glass KDE Plasma 6 widget that spawns Hack The Box machines, connects the VPN and opens your toolkit
+	pkgver = 1.0.0
+	pkgrel = 1
+	url = https://github.com/vedant-sec/OneClickHTB
+	arch = any
+	license = MIT
+	depends = plasma-workspace
+	depends = plasma5support
+	depends = kirigami
+	depends = python
+	optdepends = openvpn: bring the lab tunnel up automatically
+	optdepends = polkit: pkexec based OpenVPN start
+	optdepends = burpsuite: launch BurpSuite automatically
+	optdepends = firefox: open the machine URL
+	source = oneclickhtb-1.0.0.tar.gz::https://github.com/vedant-sec/OneClickHTB/archive/refs/tags/v1.0.0.tar.gz
+	sha256sums = SKIP
+
+pkgname = oneclickhtb
