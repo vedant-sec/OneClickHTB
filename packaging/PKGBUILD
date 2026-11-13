@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 vedant-sec
+# SPDX-License-Identifier: MIT
+#
+# Maintainer: vedant-sec <bornprogrammer1@gmail.com>
+pkgname=oneclickhtb
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Neon-glass KDE Plasma 6 widget that spawns Hack The Box machines, connects the VPN and opens your toolkit"
+arch=('any')
+url="https://github.com/vedant-sec/OneClickHTB"
+license=('MIT')
+depends=('plasma-workspace' 'plasma5support' 'kirigami' 'python')
+optdepends=(
+    'openvpn: bring the lab tunnel up automatically'
+    'polkit: pkexec based OpenVPN start'
+    'burpsuite: launch BurpSuite automatically'
+    'firefox: open the machine URL'
+)
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+    install -d "$pkgdir/usr/share/plasma/plasmoids/org.htb.machinelauncher"
+    cp -a "$srcdir/OneClickHTB-$pkgver/plasmoid/org.htb.machinelauncher/." \
+        "$pkgdir/usr/share/plasma/plasmoids/org.htb.machinelauncher/"
+
+    install -Dm755 "$srcdir/OneClickHTB-$pkgver/plasmoid/org.htb.machinelauncher/contents/scripts/htb_spawn.py" \
+        "$pkgdir/usr/share/plasma/plasmoids/org.htb.machinelauncher/contents/scripts/htb_spawn.py"
+
+    install -Dm644 "$srcdir/OneClickHTB-$pkgver/LICENSE" \
+        "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 "$srcdir/OneClickHTB-$pkgver/assets/icons/oneclickhtb.svg" \
+        "$pkgdir/usr/share/icons/hicolor/scalable/apps/oneclickhtb.svg"
+}

@@ -41,6 +41,11 @@
             <default>true</default>
         </entry>
 
+        <!-- Backend -->
+        <entry name="pythonPath" type="String">
+            <default></default>
+        </entry>
+
         <!-- UI state -->
         <entry name="lastMachine" type="String">
             <default></default>

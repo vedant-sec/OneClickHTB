@@ -482,6 +482,29 @@ def main():
           "abcdefghij" not in hb.redact("x abcdefghijklmnopqrstuvwxyz0123456789 y"),
           hb.redact("x abcdefghijklmnopqrstuvwxyz0123456789 y"))
 
+    print("23) route errors are turned into an actionable message")
+    import importlib.util as _imp
+    spec2 = _imp.spec_from_file_location("htb_spawn_routes", SCRIPT)
+    hb2 = _imp.module_from_spec(spec2)
+    spec2.loader.exec_module(hb2)
+    err = hb2.ApiError(405, "The POST method is not supported for route "
+                            "api/v4/machine/active. Supported methods: GET, HEAD.")
+    msg = hb2.friendly_error(err)
+    check("mentions the API change", "changed their API" in msg, msg)
+    check("points at the project", "OneClickHTB" in msg, msg)
+    plain = hb2.ApiError(500, "boom")
+    check("normal errors untouched", hb2.friendly_error(plain) == "boom",
+          hb2.friendly_error(plain))
+
+    print("24) route health probe reports live routes")
+    r = run(["--diagnose", "--job-json", json.dumps({"machine": "cap"})], env)
+    report = json.loads(r.stdout)
+    routes = report.get("routes", {})
+    check("profile route alive", routes.get("profile", {}).get("alive") is True, routes)
+    check("spawn route alive", routes.get("spawn", {}).get("alive") is True, routes)
+    check("reset route alive", routes.get("reset", {}).get("alive") is True, routes)
+    check("terminate not probed", routes.get("terminate", {}).get("status") is None, routes)
+
     print("21) vpn phase requires a profile")
     job = {"vpn_mode": "pkexec", "vpn_config": "/nonexistent/x.ovpn"}
     r = run(["--phase", "vpn", "--job-json", json.dumps(job)], env)

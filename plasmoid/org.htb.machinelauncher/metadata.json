@@ -3,16 +3,19 @@
     "KPlugin": {
         "Authors": [
             {
-                "Name": "arceus"
+                "Name": "vedant-sec",
+                "Email": "bornprogrammer1@gmail.com"
             }
         ],
+        "BugReportUrl": "https://github.com/vedant-sec/OneClickHTB/issues",
         "Category": "System Information",
-        "Description": "Neon-glass control panel that authenticates with the Hack The Box API, spawns a machine, dials the VPN and launches BurpSuite + Firefox.",
-        "Icon": "network-vpn",
+        "Description": "Spawn a Hack The Box machine, connect the VPN and launch BurpSuite + Firefox from a neon glass ladder on your desktop. Community project, not affiliated with Hack The Box.",
+        "Icon": "oneclickhtb",
         "Id": "org.htb.machinelauncher",
         "License": "MIT",
-        "Name": "HTB Machine Launcher",
-        "Version": "1.0.8"
+        "Name": "OneClickHTB",
+        "Version": "1.0.0",
+        "Website": "https://github.com/vedant-sec/OneClickHTB"
     },
     "X-Plasma-API-Minimum-Version": "6.0",
     "X-Plasma-MainScript": "ui/main.qml"

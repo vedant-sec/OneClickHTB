@@ -19,6 +19,7 @@ Kirigami.FormLayout {
     property alias cfg_launchFirefox: firefoxCheck.checked
     property alias cfg_openMachineUrl: urlCheck.checked
     property alias cfg_terminateExisting: terminateCheck.checked
+    property alias cfg_pythonPath: pythonField.text
 
     // ------------------------------------------------------------------ //
     QQC2.Label {
@@ -140,6 +141,27 @@ Kirigami.FormLayout {
     QQC2.CheckBox {
         id: terminateCheck
         text: "Terminate a previously spawned machine when needed"
+    }
+
+    QQC2.Label {
+        Kirigami.FormData.isSection: true
+        text: "Backend"
+    }
+
+    QQC2.TextField {
+        id: pythonField
+        Kirigami.FormData.label: "Python interpreter:"
+        Layout.preferredWidth: Kirigami.Units.gridUnit * 20
+        placeholderText: "python3"
+    }
+
+    QQC2.Label {
+        Kirigami.FormData.label: ""
+        textFormat: Text.RichText
+        text: "<i>Leave empty to use <code>python3</code>. NixOS users usually need the " +
+              "absolute path from <code>environment.systemPackages</code> " +
+              "(e.g. <code>/run/current-system/sw/bin/python3</code>).</i>"
+        wrapMode: Text.WordWrap
     }
 
     QQC2.Label {

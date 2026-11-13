@@ -1,7 +1,7 @@
-# HTB Machine Launcher — KDE Plasma 6 widget
+# OneClickHTB — KDE Plasma 6 widget
 
-A liquid-glass, neon-on-dark desktop widget for CachyOS / KDE Plasma 6 that takes
-a machine name and walks a ladder:
+A liquid-glass, neon-on-dark desktop widget for **KDE Plasma 6** that takes a
+machine name and walks a ladder:
 
 ```
 01  CONNECT TO HTB API     → authenticate, resolve the machine
@@ -26,10 +26,26 @@ Settings page: `docs/preview-settings.png`
 
 | Thing | Why |
 |---|---|
-| KDE Plasma **6** (tested on 6.8) | plasmoid API 6.0 |
-| `python3` (stdlib only) | backend — no pip packages needed |
-| `openvpn` + `pkexec` | VPN rung (or switch it to `sudo -n` / off) |
+| KDE Plasma **6** (tested on 6.8) | plasmoid API 6.0 / Qt ≥ 6.5 |
+| `python3` ≥ 3.8 (stdlib only) | backend — no pip packages, no venv |
+| `iproute2` (`ip`) | tunnel detection for the VPN rung |
+| `openvpn` + `pkexec`/`sudo` | VPN rung (or switch it to `sudo -n` / off) |
 | `burpsuite`, `firefox` | optional; missing tools degrade to a warning |
+
+### Which systems run it
+
+Anything with **Plasma 6**, Wayland or X11 — the distro itself is irrelevant:
+
+| ✅ Works | ❌ Does not work |
+|---|---|
+| Arch, CachyOS, EndeavourOS, Manjaro | **Plasma 5.27** — Debian 12, Ubuntu 24.04 LTS, SteamOS 3, Kubuntu 23.10 |
+| Fedora KDE 40+, Bazzite, Aurora | GNOME / XFCE / Cinnamon / Hyprland / Sway (a plasmoid needs Plasma) |
+| openSUSE Tumbleweed / Slowroll / Leap 16 | Windows, macOS, WSL without a Plasma session |
+| KDE neon, Kubuntu 24.10+, Debian 13 | |
+| NixOS — set **Python interpreter** in settings (`/run/current-system/sw/bin/python3`) | |
+
+It is a **desktop** widget (roughly 400×560 px). It loads in a panel but the
+ladder needs vertical room.
 
 BurpSuite is auto-detected, so a jar-based install works without configuration:
 the explicit setting, then `burpsuite`/`burpsuite_pro`/`burp` on `PATH`, then the
@@ -38,14 +54,25 @@ the explicit setting, then `burpsuite`/`burpsuite_pro`/`burp` on `PATH`, then th
 
 ## Install
 
+Three ways, all equivalent:
+
 ```bash
+# 1. from a git clone (installs/upgrades, plus the app icon)
 ./install.sh
+
+# 2. from a release artifact (no clone needed)
+kpackagetool6 --type Plasma/Applet --install oneclickhtb-1.0.0.plasmoid
+
+# 3. Arch / CachyOS / EndeavourOS (after the AUR package is published)
+yay -S oneclickhtb
 ```
+
+`./install.sh --uninstall` removes the widget and its icon.
 
 Then:
 
 1. Right-click the desktop → **Enter Edit Mode** → **Add Widgets…**
-2. Search **HTB Machine Launcher**, drag it onto the desktop
+2. Search **OneClickHTB**, drag it onto the desktop
 3. Right-click the widget → **Configure → Launcher** and fill in:
    * **App Token** — from <https://app.hackthebox.com/profile/settings> → *App Tokens*
    * **VPN profile** — your `.ovpn` file (e.g. `~/htb/lab.ovpn`)
@@ -53,6 +80,8 @@ Then:
      (passwordless), or `none` (treat the tunnel as already up)
    * **BurpSuite / Firefox commands** — anything on your `PATH`, args allowed
      (`burpsuite --project-temp-dir /tmp`), or an absolute path
+   * **Python interpreter** — leave empty for `python3`; NixOS and unusual
+     setups need an absolute path
 
 If the widget does not show up in the picker:
 
@@ -184,16 +213,33 @@ The token is resolved in this order: `--token` / `token` in the job (CLI only) �
 `HTB_TOKEN` in the environment → the plasmoid config. The widget itself only uses
 the last one.
 
-Explain any lookup (prints counts/statuses, never the token):
+Explain any lookup (prints counts/statuses/tool detection/routes, never the token):
 
 ```bash
-python3 htb_spawn.py --diagnose --job-json '{"machine":"cap","token":"<TOKEN>"}'
+python3 htb_spawn.py --diagnose --job-json '{"machine":"cap"}'
 ```
+
+The report includes a **route health** block that probes every endpoint the
+widget needs (`GET /machine/profile`, `GET /machine/active`, `POST /vm/spawn`,
+`POST /vm/reset`) with a bogus machine id, so it is safe to run at any time.
+`POST /vm/terminate` is deliberately not probed — it ignores the id and would
+stop the machine that is currently running.
+
+```json
+"routes": {
+  "spawn":  {"request": "POST /vm/spawn", "status": 404, "alive": true,  "note": "No results for this machine"},
+  "reset":  {"request": "POST /vm/reset", "status": 422, "alive": true,  "note": "The selected machine id is invalid."},
+  "terminate": {"request": "POST /vm/terminate", "status": null, "alive": null, "note": "not probed"}
+}
+```
+
+When HTB reshuffles their API, the ladder shows *"HTB changed their API (…).
+Update the widget: …"* instead of a raw HTTP error.
 
 ## Tests / preview
 
 ```bash
-python3 dev/test_backend.py                 # mock HTB API, 7 end-to-end checks
+python3 dev/test_backend.py                 # mock HTB API, full backend suite
 ./dev/check_plasmoid.sh                     # load the applet in a real Plasma context
 QT_QPA_PLATFORM=offscreen qml6 dev/shot.qml # render snapshots to /tmp/opencode
 qml6 dev/preview.qml                        # live window (demo mode, no network)
@@ -215,9 +261,34 @@ layer) outside plasmashell; the widget falls back to a stub config there so it
 can be developed standalone. `contents/ui/main.qml` is a thin plasmoid shell
 that adds `Plasmoid.backgroundHints: NoBackground` next to it.
 
+## Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| `HTB changed their API (…405…)` in the ladder | HTB moved an endpoint. Run `--diagnose` to see which route died, then update the widget. |
+| `HTB rejected the App Token (401)` | Wrong/expired token, or it was pasted with a newline. Re-paste it in Configure → Apply. |
+| `no App Token configured` | Token isn't in the plasmoid config yet — paste it and press **Apply** (the backend reads the saved config, not the open dialog). |
+| `python interpreter not found` | Install `python3`, or set an absolute **Python interpreter** path in Configure. |
+| `iproute2 ('ip') not installed` | Install `iproute2`; without it the VPN stage cannot verify the tunnel. |
+| VPN rung fails instantly | `pkexec` needs a polkit agent (Plasma ships one) and `openvpn` must be installed; check `~/.cache/htb-launcher/openvpn.log`. |
+| Rung 4 says `not found - set its command` | BurpSuite wasn't detected — put the launcher path in **BurpSuite command** (a fish/bash alias does not count). |
+| Widget missing from the picker | `systemctl --user restart plasma-plasmashell.service` |
+
+## FAQ
+
+**Does it work on Plasma 5 / Ubuntu 24.04 / SteamOS?** No. Plasma 6 only.
+**Does it need root?** No. Only `pkexec`/`sudo` for the OpenVPN process.
+**Does it phone home?** No. It talks to `labs.hackthebox.com` and nothing else.
+**Will it keep running if I close plasmashell?** OpenVPN/Burp/Firefox are launched
+detached and survive; a spawn in flight is interrupted (the machine still spawns,
+just re-sync with the widget).
+**Is it affiliated with Hack The Box?** No, community project.
+
 ## Uninstall
 
 ```bash
+./install.sh --uninstall
+# or
 kpackagetool6 --type Plasma/Applet --remove org.htb.machinelauncher
 ```
 

@@ -46,7 +46,9 @@ API_BASE = os.environ.get("HTB_LAUNCHER_API", "https://labs.hackthebox.com/api/v
 # file, so it cannot show up in `ps`.
 PLASMOID_ID = "org.htb.machinelauncher"
 APPLETRC_NAME = "plasma-org.kde.plasma.desktop-appletsrc"
-CACHE_DIR = os.path.join(os.path.expanduser("~"), ".cache", "htb-launcher")
+CACHE_DIR = os.path.join(
+    os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache"),
+    "htb-launcher")
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) htb-launcher/1.0"
 
 SPAWN_TIMEOUT = 300      # seconds to wait for HTB to hand out an IP
@@ -138,6 +140,22 @@ class StageError(RuntimeError):
     def __init__(self, stage: str, message: str):
         super().__init__(message)
         self.stage = stage
+
+
+ROUTE_ERROR_HINTS = ("could not be found", "method is not supported")
+
+
+def is_route_error(exc: BaseException) -> bool:
+    text = str(exc).lower()
+    return any(hint in text for hint in ROUTE_ERROR_HINTS)
+
+
+def friendly_error(exc: BaseException) -> str:
+    """Turn HTB's raw Laravel route errors into something actionable."""
+    if is_route_error(exc):
+        return (f"HTB changed their API ({exc}). "
+                "Update the widget: https://github.com/vedant-sec/OneClickHTB")
+    return str(exc)
 
 
 class ApiError(RuntimeError):
@@ -692,7 +710,7 @@ def guarded(stage: str, fn, *args, **kwargs):
     except StageError:
         raise
     except ApiError as exc:
-        raise StageError(stage, str(exc)) from None
+        raise StageError(stage, friendly_error(exc)) from None
     except (OSError, ValueError) as exc:
         raise StageError(stage, str(exc)) from None
 
@@ -753,10 +771,14 @@ def phase_spawn(job: dict) -> dict:
 
 def phase_vpn(job: dict) -> dict:
     mode = str(job.get("vpn_mode") or "pkexec").lower()
-    found = tunnel()
-    if found:
-        return {"state": "done", "detail": f"tunnel up on {found[0]} ({found[1]})",
-                "iface": found[0]}
+    has_ip = shutil.which("ip") is not None
+
+    if has_ip:
+        found = tunnel()
+        if found:
+            return {"state": "done", "detail": f"tunnel up on {found[0]} ({found[1]})",
+                    "iface": found[0]}
+
     if mode == "none":
         return {"state": "skipped", "detail": "VPN launch disabled in settings"}
 
@@ -765,6 +787,10 @@ def phase_vpn(job: dict) -> dict:
         raise StageError("vpn", "no OpenVPN profile configured")
     if not os.path.isfile(config):
         raise StageError("vpn", f"profile not found: {config}")
+
+    if not has_ip:
+        return {"state": "warn",
+                "detail": "iproute2 ('ip') not installed - cannot verify the tunnel, skipped"}
 
     proc, log_path = guarded("vpn", start_vpn, config, mode)
     iface, addr = guarded("vpn", wait_vpn, proc, log_path)
@@ -927,6 +953,46 @@ def run_demo(job: dict) -> int:
     return 0
 
 
+def _probe(method: str, path: str, token: str, payload=None):
+    try:
+        api(method, path, token, payload)
+        return 200, "ok"
+    except ApiError as exc:
+        return exc.status, str(exc)
+
+
+def probe_routes(token: str) -> dict:
+    """Read-only health check of the routes the widget depends on.
+
+    ``/vm/terminate`` is intentionally not probed: it ignores the id and would
+    stop the machine that is currently running.
+    """
+    checks = (
+        ("profile", "GET", "/machine/profile/Cap", None),
+        ("active", "GET", "/machine/active", None),
+        ("spawn", "POST", "/vm/spawn", {"machine_id": 999999}),
+        ("reset", "POST", "/vm/reset", {"machine_id": 999999}),
+    )
+    report = {}
+    for name, method, path, payload in checks:
+        status, message = _probe(method, path, token, payload)
+        dead = "could not be found" in message.lower() or \
+               "method is not supported" in message.lower()
+        report[name] = {
+            "request": f"{method} {path}",
+            "status": status,
+            "alive": not dead,
+            "note": message[:120],
+        }
+    report["terminate"] = {
+        "request": "POST /vm/terminate",
+        "status": None,
+        "alive": None,
+        "note": "not probed - it would stop the running machine",
+    }
+    return report
+
+
 def diagnose(job: dict) -> dict:
     """Explain what a machine lookup actually sees (CLI debugging aid)."""
     token = token_of(job)
@@ -959,6 +1025,11 @@ def diagnose(job: dict) -> dict:
     report["search_endpoint"] = [m.get("name") for m in search_machines(token, query)]
 
     burp, burp_label = burp_argv(job.get("burp_cmd"))
+    try:
+        report["routes"] = probe_routes(token)
+    except ApiError as exc:
+        report["routes"] = {"error": str(exc)}
+
     report["tools"] = {
         "burpsuite": burp[0] if burp else f"not found ({burp_label})",
         "firefox": (resolve_command(job.get("firefox_cmd") or "firefox") or ["not found"])[0],

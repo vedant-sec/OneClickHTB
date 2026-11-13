@@ -114,6 +114,11 @@ Item {
         }
     }
 
+    readonly property string pythonBin: {
+        var configured = (root.cfg.pythonPath || "").toString().trim()
+        return configured.length > 0 ? configured : "python3"
+    }
+
     readonly property string scriptPath: {
         var u = Qt.resolvedUrl("../scripts/htb_spawn.py").toString()
         if (u.indexOf("file://") === 0)
@@ -181,13 +186,30 @@ Item {
                     }
                 }
 
-                Text {
+                // own mark: rising ladder rungs + a status node
+                Item {
                     anchors.centerIn: parent
-                    text: "HTB"
-                    color: root.cNeon
-                    font.pixelSize: 13
-                    font.bold: true
-                    font.letterSpacing: 1.0
+                    width: 24
+                    height: 20
+
+                    Rectangle {
+                        x: 0; y: 15; width: 9; height: 4; radius: 2
+                        color: root.cNeon
+                        opacity: 0.5
+                    }
+                    Rectangle {
+                        x: 2; y: 9; width: 13; height: 4; radius: 2
+                        color: root.cNeon
+                        opacity: 0.78
+                    }
+                    Rectangle {
+                        x: 4; y: 3; width: 17; height: 4; radius: 2
+                        color: root.cNeon
+                    }
+                    Rectangle {
+                        x: 22; y: 1; width: 4; height: 4; radius: 2
+                        color: root.cAqua
+                    }
                 }
             }
 
@@ -770,6 +792,11 @@ Item {
         return "working…"
     }
 
+    function backendCommand(phase, job) {
+        return '"' + root.pythonBin + '" "' + scriptPath + '" --phase ' + phase
+             + ' --job "' + encodeURIComponent(JSON.stringify(job)) + '"'
+    }
+
     function buildCommand(id) {
         // NOTE: the App Token is deliberately *not* part of the job - the
         // backend reads it from the plasmoid config so it never appears in a
@@ -788,8 +815,7 @@ Item {
             open_url: root.cfg.openMachineUrl !== false,
             terminate_existing: root.cfg.terminateExisting !== false
         }
-        return 'python3 "' + scriptPath + '" --phase ' + id
-             + ' --job "' + encodeURIComponent(JSON.stringify(job)) + '"'
+        return backendCommand(id, job)
     }
 
     function formatServerTime(ms) {
@@ -908,9 +934,7 @@ Item {
         var res = _lastResult
 
         if (code !== 0 || !res || res.state === "error") {
-            var detail = (res && res.detail) ? res.detail
-                       : (_stderr.length > 0 ? _stderr.split("\n").pop()
-                                             : "stage failed (exit " + code + ")")
+            var detail = failureText(res, code)
             setStage(id, "error", detail)
             skipRest(id, "not reached")
             runState = "failed"
@@ -1077,8 +1101,7 @@ Item {
         if (token.length === 0)
             return
         var job = { nonce: Date.now(), machine: machineField.text.trim() }
-        var cmd = 'python3 "' + scriptPath + '" --phase status'
-                + ' --job "' + encodeURIComponent(JSON.stringify(job)) + '"'
+        var cmd = backendCommand("status", job)
         _mode = "status"
         _buffer = ""
         _stderr = ""
@@ -1136,8 +1159,7 @@ Item {
             machine: machineField.text.trim(),
             machine_id: pending.machine_id || 0
         }
-        var cmd = 'python3 "' + scriptPath + '" --phase reset'
-                + ' --job "' + encodeURIComponent(JSON.stringify(job)) + '"'
+        var cmd = backendCommand("reset", job)
         appendLog("[launcher] restart requested")
         _source = cmd
         exec.connectSource(cmd)
@@ -1150,9 +1172,7 @@ Item {
         var res = _lastResult
 
         if (code !== 0 || !res || res.state === "error") {
-            var detail = (res && res.detail) ? res.detail
-                       : (_stderr.length > 0 ? _stderr.split("\n").pop()
-                                            : "restart failed")
+            var detail = failureText(res, code)
             appendLog("[restart] " + detail)
             errText = detail
             notice = ""
@@ -1207,8 +1227,7 @@ Item {
             machine: machineField.text.trim(),
             machine_id: pending.machine_id || 0
         }
-        var cmd = 'python3 "' + scriptPath + '" --phase terminate'
-                + ' --job "' + encodeURIComponent(JSON.stringify(job)) + '"'
+        var cmd = backendCommand("terminate", job)
 
         appendLog("[launcher] terminate requested")
         _source = cmd
@@ -1221,9 +1240,7 @@ Item {
         var res = _lastResult
 
         if (code !== 0 || !res || res.state === "error") {
-            var detail = (res && res.detail) ? res.detail
-                       : (_stderr.length > 0 ? _stderr.split("\n").pop()
-                                            : "terminate failed")
+            var detail = failureText(res, code)
             appendLog("[terminate] " + detail)
             errText = detail
             notice = ""
@@ -1258,6 +1275,16 @@ Item {
         runState = "idle"
         resetStages()
         appendLog("[launcher] widget reset")
+    }
+
+    function failureText(res, code) {
+        if (code === 127)
+            return "python interpreter not found - set it in Configure -> Launcher"
+        if (res && res.detail)
+            return res.detail
+        if (_stderr.length > 0)
+            return _stderr.split("\n").pop()
+        return "stage failed (exit " + code + ")"
     }
 
     function flash(message) {
