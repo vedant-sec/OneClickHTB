@@ -4,7 +4,11 @@
 [![Latest release](https://img.shields.io/github/v/release/vedant-sec/OneClickHTB)](https://github.com/vedant-sec/OneClickHTB/releases)
 [![Requires Plasma 6](https://img.shields.io/badge/KDE-Plasma%206-1d99f3)](https://kde.org/plasma-desktop/)
 
-![OneClickHTB in action](docs/demo.gif)
+<p align="center">
+  <img src="docs/demo.gif" width="32%" alt="the ladder loop" />
+  <img src="docs/live_demo.gif" width="66%" alt="a real spawn on a live desktop" />
+</p>
+<p align="center"><sub>left: the ladder loop &nbsp;·&nbsp; right: a real spawn on a live desktop</sub></p>
 
 A liquid-glass, neon-on-dark desktop widget for **KDE Plasma 6** that takes a
 machine name and walks a ladder:
