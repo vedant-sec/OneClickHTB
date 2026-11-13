@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2026 vedant-sec
+# SPDX-License-Identifier: MIT
+name: Bug report
+description: Something in the widget does not work
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never paste your App Token.** Blur or trim it from any screenshot/log.
+        The `--diagnose` output below is safe to share — it never prints the token.
+  - type: input
+    id: distro
+    attributes:
+      label: Distribution
+      placeholder: CachyOS / Fedora KDE 42 / Debian 13 / NixOS ...
+    validations:
+      required: true
+  - type: input
+    id: plasma
+    attributes:
+      label: Plasma version
+      description: Output of `plasmashell --version`
+      placeholder: plasmashell 6.8.2
+    validations:
+      required: true
+  - type: dropdown
+    id: session
+    attributes:
+      label: Session
+      options:
+        - Wayland
+        - X11
+        - Not sure
+  - type: textarea
+    id: steps
+    attributes:
+      label: What happened
+      description: Which rung failed, what the footer said, what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnose
+    attributes:
+      label: "--diagnose output"
+      description: |
+        Run this and paste the JSON (it is read-only and redacts secrets):
+        `python3 ~/.local/share/plasma/plasmoids/org.htb.machinelauncher/contents/scripts/htb_spawn.py --diagnose --job-json '{"machine":"<name>"}'`
+      render: json

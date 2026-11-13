@@ -36,3 +36,8 @@ Bump flow: update `pkgver` + `pkgrel`, run `updpkgsums`, regenerate `.SRCINFO`.
 Attach that file to the GitHub release so users can install it with
 `kpackagetool6 --type Plasma/Applet --install oneclickhtb-<version>.plasmoid`
 (or Plasma's *Install from file*).
+
+> **Status:** AUR is currently not accepting new packages/users, so this package
+> is not published there yet. The GitHub release artifact and `install.sh` are the
+> supported install paths for now. Nothing else needs to change when the AUR
+> reopens — the PKGBUILD and `.SRCINFO` are already validated with `makepkg -f`.

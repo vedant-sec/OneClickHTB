@@ -4,6 +4,8 @@
 [![Latest release](https://img.shields.io/github/v/release/vedant-sec/OneClickHTB)](https://github.com/vedant-sec/OneClickHTB/releases)
 [![Requires Plasma 6](https://img.shields.io/badge/KDE-Plasma%206-1d99f3)](https://kde.org/plasma-desktop/)
 
+![OneClickHTB in action](docs/demo.gif)
+
 A liquid-glass, neon-on-dark desktop widget for **KDE Plasma 6** that takes a
 machine name and walks a ladder:
 
@@ -58,21 +60,32 @@ the explicit setting, then `burpsuite`/`burpsuite_pro`/`burp` on `PATH`, then th
 
 ## Install
 
-Three ways, all equivalent:
+One line, no clone:
 
 ```bash
-# 1. from a git clone (installs/upgrades, plus the app icon)
+curl -fsSL https://raw.githubusercontent.com/vedant-sec/OneClickHTB/main/install.sh | bash
+```
+
+From a clone (same installer, but local):
+
+```bash
+git clone https://github.com/vedant-sec/OneClickHTB.git
+cd OneClickHTB
 ./install.sh
+```
 
-# 2. from the release artifact (no clone needed)
-#    https://github.com/vedant-sec/OneClickHTB/releases
+Or drop in the prebuilt plasmoid from the
+[releases page](https://github.com/vedant-sec/OneClickHTB/releases):
+
+```bash
 kpackagetool6 --type Plasma/Applet --install oneclickhtb-1.0.0.plasmoid
-
-# 3. Arch / CachyOS / EndeavourOS (once the AUR package is published)
-yay -S oneclickhtb
 ```
 
 `./install.sh --uninstall` removes the widget and its icon.
+
+> **AUR:** `packaging/PKGBUILD` is ready and validated (`makepkg -f` builds), but
+> the AUR is currently not accepting new packages, so `yay -S oneclickhtb` is not
+> available yet.
 
 Then:
 
