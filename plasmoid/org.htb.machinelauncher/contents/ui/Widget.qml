@@ -641,7 +641,7 @@ Item {
 
     Timer {
         id: phaseGuard
-        interval: 420000
+        interval: 600000
         onTriggered: {
             if (!root.running && !root.stopping)
                 return

@@ -78,7 +78,7 @@ Or drop in the prebuilt plasmoid from the
 [releases page](https://github.com/vedant-sec/OneClickHTB/releases):
 
 ```bash
-kpackagetool6 --type Plasma/Applet --install oneclickhtb-1.0.0.plasmoid
+kpackagetool6 --type Plasma/Applet --install oneclickhtb-1.0.1.plasmoid
 ```
 
 `./install.sh --uninstall` removes the widget and its icon.
@@ -286,6 +286,7 @@ that adds `Plasmoid.backgroundHints: NoBackground` next to it.
 | `HTB changed their API (…405…)` in the ladder | HTB moved an endpoint. Run `--diagnose` to see which route died, then update the widget. |
 | `HTB rejected the App Token (401)` | Wrong/expired token, or it was pasted with a newline. Re-paste it in Configure → Apply. |
 | `no App Token configured` | Token isn't in the plasmoid config yet — paste it and press **Apply** (the backend reads the saved config, not the open dialog). |
+| `too many API calls` / rate limited | The spawn poller backs off (4 s → 15 s) and waits out 429s, so this should be rare. If it still happens, wait a minute and press SPAWN again — a machine that finished spawning is reused instead of re-spawned. |
 | `python interpreter not found` | Install `python3`, or set an absolute **Python interpreter** path in Configure. |
 | `iproute2 ('ip') not installed` | Install `iproute2`; without it the VPN stage cannot verify the tunnel. |
 | VPN rung fails instantly | `pkexec` needs a polkit agent (Plasma ships one) and `openvpn` must be installed; check `~/.cache/htb-launcher/openvpn.log`. |

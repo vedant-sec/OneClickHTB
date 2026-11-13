@@ -51,9 +51,8 @@ CACHE_DIR = os.path.join(
     "htb-launcher")
 USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) htb-launcher/1.0"
 
-SPAWN_TIMEOUT = 300      # seconds to wait for HTB to hand out an IP
+SPAWN_TIMEOUT = 420      # seconds to wait for HTB to hand out an IP
 VPN_TIMEOUT = 120        # seconds to wait for the tunnel interface
-POLL_INTERVAL = 3
 
 PHASES = ("api", "spawn", "vpn", "burp", "firefox")
 
@@ -151,7 +150,10 @@ def is_route_error(exc: BaseException) -> bool:
 
 
 def friendly_error(exc: BaseException) -> str:
-    """Turn HTB's raw Laravel route errors into something actionable."""
+    """Turn HTB's raw errors into something actionable."""
+    if isinstance(exc, ApiError) and exc.status == 429:
+        return ("HTB rate limit (too many API calls) - wait a minute, then press "
+                "SPAWN again; a machine that already finished spawning is reused")
     if is_route_error(exc):
         return (f"HTB changed their API ({exc}). "
                 "Update the widget: https://github.com/vedant-sec/OneClickHTB")
@@ -159,9 +161,10 @@ def friendly_error(exc: BaseException) -> str:
 
 
 class ApiError(RuntimeError):
-    def __init__(self, status: int, message: str):
+    def __init__(self, status: int, message: str, retry_after: float | None = None):
         super().__init__(message)
         self.status = status
+        self.retry_after = retry_after
 
 
 # --------------------------------------------------------------------------- #
@@ -209,7 +212,14 @@ def _api(method: str, path: str, token: str | None = None, payload=None,
             data = json.loads(raw)
         except Exception:
             data = {"message": raw.strip()[:300]}
-        raise ApiError(exc.code, _message(data)) from None
+        retry_after = None
+        header = exc.headers.get("Retry-After") if exc.headers else None
+        if header:
+            try:
+                retry_after = float(header)
+            except ValueError:
+                retry_after = None
+        raise ApiError(exc.code, _message(data), retry_after) from None
     except error.URLError as exc:
         raise ApiError(0, f"cannot reach labs.hackthebox.com ({exc.reason})") from None
     except (TimeoutError, OSError) as exc:
@@ -220,13 +230,19 @@ def _api(method: str, path: str, token: str | None = None, payload=None,
 
 def api(method: str, path: str, token: str | None = None, payload=None,
         tries: int = 3):
+    """HTTP with retries for server errors.
+
+    429 is deliberately *not* retried here: retrying a rate limit in a loop is
+    exactly what keeps the limit tripped. Callers that can afford to wait (the
+    spawn poller) handle 429 themselves with a real backoff.
+    """
     last: ApiError | None = None
     for attempt in range(tries):
         try:
             return _api(method, path, token, payload)
         except ApiError as exc:
             last = exc
-            if exc.status in (429, 500, 502, 503, 504) and attempt + 1 < tries:
+            if exc.status in (500, 502, 503, 504) and attempt + 1 < tries:
                 time.sleep(2 + attempt * 2)
                 continue
             raise
@@ -431,6 +447,21 @@ def active_info(token: str) -> dict:
     return info if isinstance(info, dict) else {}
 
 
+def active_info_patient(token: str, tries: int = 3) -> dict:
+    """active_info() that waits out a short rate limit instead of failing."""
+    for attempt in range(tries):
+        try:
+            return active_info(token)
+        except ApiError as exc:
+            if exc.status == 429 and attempt + 1 < tries:
+                wait = exc.retry_after or 10 * (attempt + 1)
+                print(f"HTB rate limit - retrying in {wait:.0f}s", file=sys.stderr)
+                time.sleep(wait)
+                continue
+            raise
+    return {}
+
+
 def terminate_machine(token: str, machine_id=None) -> bool:
     """Terminate the active machine.
 
@@ -456,31 +487,63 @@ def terminate_machine(token: str, machine_id=None) -> bool:
 
 
 def spawn_machine(token: str, machine_id, terminate_existing: bool) -> dict:
-    try:
-        return api("POST", "/vm/spawn", token, {"machine_id": machine_id})
-    except ApiError as exc:
-        text = str(exc).lower()
-        retryable = any(k in text for k in ("already", "active machine", "assigned", "terminate"))
-        if terminate_existing and retryable:
-            terminate_machine(token, machine_id)
-            time.sleep(4)
+    for attempt in range(3):
+        try:
             return api("POST", "/vm/spawn", token, {"machine_id": machine_id})
-        raise
+        except ApiError as exc:
+            if exc.status == 429:
+                if attempt < 2:
+                    wait = exc.retry_after or 15 * (attempt + 1)
+                    print(f"HTB rate limit while spawning - retrying in {wait:.0f}s",
+                          file=sys.stderr)
+                    time.sleep(wait)
+                    continue
+                raise
+
+            text = str(exc).lower()
+            retryable = any(k in text for k in ("already", "active machine",
+                                                "assigned", "terminate"))
+            if terminate_existing and retryable:
+                terminate_machine(token, machine_id)
+                time.sleep(4)
+                return api("POST", "/vm/spawn", token, {"machine_id": machine_id})
+            raise
+    raise ApiError(0, "could not reach HTB's spawn endpoint")
 
 
 def wait_for_machine(token: str, machine_id, timeout: int = SPAWN_TIMEOUT):
-    """Wait until the machine has an IP. Returns (ip, expires_at)."""
+    """Wait until the machine has an IP. Returns (ip, expires_at, name).
+
+    Polls with an increasing delay (4 s -> 15 s) so a slow spawn costs ~30
+    requests instead of ~100, and treats 429 as "keep waiting" rather than a
+    fatal error - the box usually finishes spawning anyway.
+    """
     deadline = time.time() + timeout
+    delay = 4.0
     while time.time() < deadline:
-        info = active_info(token)
+        try:
+            info = active_info(token)
+        except ApiError as exc:
+            if exc.status != 429:
+                raise
+            wait = exc.retry_after or min(delay * 2, 30)
+            print(f"HTB rate limit while waiting - backing off {wait:.0f}s",
+                  file=sys.stderr)
+            time.sleep(min(wait, max(0.0, deadline - time.time())))
+            delay = min(delay * 1.5, 20)
+            continue
+
         if info and str(info.get("id", "")) == str(machine_id):
             ip = info.get("ip")
             if ip and not info.get("isSpawning"):
                 return (str(ip), str(info.get("expires_at") or ""),
                         info.get("name"))
-        time.sleep(POLL_INTERVAL)
+
+        time.sleep(min(delay, max(0.0, deadline - time.time())))
+        delay = min(delay * 1.25, 15)
     raise ApiError(0, f"timed out after {timeout}s waiting for an IP "
-                      "(HTB queue may be busy - try again)")
+                      "(HTB queue may be busy - press SPAWN again, an already "
+                      "running machine is reused)")
 
 
 MACHINE_LIFETIME = 24 * 3600     # seconds HTB keeps a machine alive per spawn
@@ -745,7 +808,7 @@ def phase_spawn(job: dict) -> dict:
     if not token or not machine_id:
         raise StageError("spawn", "missing credentials or machine id")
 
-    info = guarded("spawn", active_info, token)
+    info = guarded("spawn", active_info_patient, token)
     same = (info and str(info.get("id", "")) == str(machine_id)
             and info.get("ip") and not info.get("isSpawning"))
     if same:
@@ -761,8 +824,20 @@ def phase_spawn(job: dict) -> dict:
         terminate_machine(token)
         time.sleep(3)
 
-    guarded("spawn", spawn_machine, token, machine_id,
-            bool(job.get("terminate_existing", True)))
+    reply = guarded("spawn", spawn_machine, token, machine_id,
+                    bool(job.get("terminate_existing", True)))
+
+    # some API revisions answer with the machine already resolved - if so we
+    # can skip polling entirely
+    reply_info = reply.get("info") if isinstance(reply, dict) else None
+    if (isinstance(reply_info, dict) and reply_info.get("ip")
+            and not reply_info.get("isSpawning")
+            and str(reply_info.get("id", "")) == str(machine_id)):
+        ip = str(reply_info["ip"])
+        return {"state": "done", "detail": f"deployed at {ip}", "ip": ip,
+                "expires_at": str(reply_info.get("expires_at") or ""),
+                "machine": reply_info.get("name"), "lifetime": MACHINE_LIFETIME}
+
     ip, expires_at, name = guarded("spawn", wait_for_machine, token, machine_id)
     return {"state": "done", "detail": f"deployed at {ip}", "ip": ip,
             "expires_at": expires_at, "machine": name,
@@ -827,7 +902,7 @@ def phase_terminate(job: dict) -> dict:
         raise StageError("terminate", "no App Token configured - open Configure -> "
                                       "Launcher, paste it and press Apply")
 
-    info = guarded("terminate", active_info, token)
+    info = guarded("terminate", active_info_patient, token)
     if not info or not info.get("id"):
         return {"state": "skipped", "detail": "no machine is running"}
 
@@ -849,7 +924,7 @@ def phase_status(job: dict) -> dict:
     token = token_of(job)
     if not token:
         raise StageError("status", "no App Token configured")
-    info = guarded("status", active_info, token)
+    info = guarded("status", active_info_patient, token)
     if not info or not info.get("id"):
         return {"state": "skipped", "detail": "no machine is running"}
     return {
@@ -885,7 +960,7 @@ def phase_reset(job: dict) -> dict:
         raise StageError("reset", "no App Token configured - open Configure -> "
                                   "Launcher, paste it and press Apply")
 
-    info = guarded("reset", active_info, token)
+    info = guarded("reset", active_info_patient, token)
     if not info or not info.get("id"):
         return {"state": "skipped", "detail": "no machine is running"}
 

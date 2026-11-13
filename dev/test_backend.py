@@ -52,6 +52,8 @@ STATE = {
     "expires_at": "",
     "resets": 0,
     "spawns": 0,
+    "rate_limit_polls": 0,
+    "rate_limit_spawn": 0,
 }
 
 
@@ -121,6 +123,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(404, {"message": "Machine not found"})
 
         if path.endswith("/machine/active"):
+            if STATE["rate_limit_polls"] > 0:
+                STATE["rate_limit_polls"] -= 1
+                body = json.dumps({"message": "Too many API calls."}).encode()
+                self.send_response(429)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Retry-After", "1")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if STATE["active"] is None:
                 return self._json(200, {"info": {}})
             STATE["polls"] += 1
@@ -161,6 +173,16 @@ class Handler(BaseHTTPRequestHandler):
 
         # --- current HTB v4 VM lifecycle routes (verified live) -------------
         if path.endswith("/vm/spawn"):
+            if STATE["rate_limit_spawn"] > 0:
+                STATE["rate_limit_spawn"] -= 1
+                body = json.dumps({"message": "Too many API calls."}).encode()
+                self.send_response(429)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Retry-After", "1")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if body.get("machine_id") not in {m["id"] for m in ACTIVE + RETIRED}:
                 return self._json(404, {"message": "No results for this machine"})
             STATE["active"] = body["machine_id"]
@@ -242,7 +264,7 @@ def main():
                       "forbid_active": False, "forbid_retired": False,
                       "forbid_search": False, "forbid_profile": False,
                       "lists_work": False, "expires_at": "", "resets": 0,
-                      "spawns": 0})
+                      "spawns": 0, "rate_limit_polls": 0, "rate_limit_spawn": 0})
         STATE.update(kw)
 
     def api_phase(machine, **kw):
@@ -492,6 +514,8 @@ def main():
     msg = hb2.friendly_error(err)
     check("mentions the API change", "changed their API" in msg, msg)
     check("points at the project", "OneClickHTB" in msg, msg)
+    limited = hb2.friendly_error(hb2.ApiError(429, "Too many API calls."))
+    check("rate limit explained", "wait a minute" in limited, limited)
     plain = hb2.ApiError(500, "boom")
     check("normal errors untouched", hb2.friendly_error(plain) == "boom",
           hb2.friendly_error(plain))
@@ -504,6 +528,19 @@ def main():
     check("spawn route alive", routes.get("spawn", {}).get("alive") is True, routes)
     check("reset route alive", routes.get("reset", {}).get("alive") is True, routes)
     check("terminate not probed", routes.get("terminate", {}).get("status") is None, routes)
+
+    print("25) rate limits are waited out, not fatal")
+    reset()
+    STATE["rate_limit_spawn"] = 1
+    STATE["rate_limit_polls"] = 1
+    job = {"machine": "Soccer", "token": "test-token", "machine_id": 57,
+           "vpn_mode": "none", "launch_burp": False, "launch_firefox": False}
+    r = run(["--phase", "spawn", "--job-json", json.dumps(job)], env)
+    payload = last_json(r.stdout)
+    check("exit 0", r.returncode == 0, r.stdout + r.stderr)
+    check("spawn completed", payload.get("state") == "done", payload)
+    check("got the ip", payload.get("ip") == "10.129.42.7", payload)
+    check("backoff logged", "rate limit" in r.stderr.lower(), r.stderr)
 
     print("21) vpn phase requires a profile")
     job = {"vpn_mode": "pkexec", "vpn_config": "/nonexistent/x.ovpn"}

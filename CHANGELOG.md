@@ -3,6 +3,22 @@
 All notable changes to **OneClickHTB**. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow SemVer.
 
+## [1.0.1] — 2026-11-13
+
+### Fixed
+
+- **SPAWN no longer dies with `too many API calls`.** The poller was hitting
+  `GET /machine/active` every 3 s *and* `api()` retried 429s with 2 s/4 s naps,
+  so a single rate-limit response snowballed and aborted the stage. Now:
+  - polling backs off 4 s → 15 s (~30 requests for a slow spawn instead of ~100),
+  - 429 is never retried in a tight loop; the poller waits it out, honouring
+    `Retry-After`,
+  - a rate-limited `POST /vm/spawn` is retried twice with a 15 s/30 s pause,
+  - the spawn budget is 7 minutes and the widget watchdog 10.
+- If `/vm/spawn` already returns the machine with an IP, polling is skipped.
+- Persistent rate limits now read *"HTB rate limit (too many API calls) — wait a
+  minute, then press SPAWN again"* instead of a raw server message.
+
 ## [1.0.0] — 2026-11-13
 
 First public release.
@@ -51,4 +67,5 @@ First public release.
 - `scripts/pack.py` builds `dist/oneclickhtb-<version>.plasmoid`.
 - `packaging/PKGBUILD` for AUR.
 
+[1.0.1]: https://github.com/vedant-sec/OneClickHTB/releases/tag/v1.0.1
 [1.0.0]: https://github.com/vedant-sec/OneClickHTB/releases/tag/v1.0.0
