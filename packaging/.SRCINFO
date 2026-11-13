@@ -14,6 +14,6 @@ pkgbase = oneclickhtb
 	optdepends = burpsuite: launch BurpSuite automatically
 	optdepends = firefox: open the machine URL
 	source = oneclickhtb-1.0.0.tar.gz::https://github.com/vedant-sec/OneClickHTB/archive/refs/tags/v1.0.0.tar.gz
-	sha256sums = SKIP
+	sha256sums = 8b5ff6651c2d6e92bc37c1e6da9676ca014ba51feaa089f48da56531516ee8f3
 
 pkgname = oneclickhtb

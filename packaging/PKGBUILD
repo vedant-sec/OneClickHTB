@@ -17,9 +17,7 @@ optdepends=(
     'firefox: open the machine URL'
 )
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-# NOTE: run `updpkgsums` once this repository is public, then regenerate
-# .SRCINFO with `makepkg --printsrcinfo > .SRCINFO` (see packaging/README.md).
-sha256sums=('SKIP')
+sha256sums=('8b5ff6651c2d6e92bc37c1e6da9676ca014ba51feaa089f48da56531516ee8f3')
 
 package() {
     install -d "$pkgdir/usr/share/plasma/plasmoids/org.htb.machinelauncher"
